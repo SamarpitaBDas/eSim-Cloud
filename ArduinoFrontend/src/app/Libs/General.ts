@@ -997,4 +997,31 @@ export class BreadBoard extends CircuitElement {
     return groups;
   }
 
+
+  public static getConnectedNodes(currentNode: Point):Point[] {
+    const breadboard = currentNode.parent as BreadBoard;
+    const currentNodeLabelName = currentNode.label.charCodeAt(0);
+    const resultNodes: Point[] = [];
+    // if + or - iterate horizontally
+    if (currentNodeLabelName == 43 || currentNodeLabelName == 45) {
+      for (const node of breadboard.sameYNodes[currentNode.y]) {
+        if(node.id != currentNode.id){
+          resultNodes.push(node);
+        }
+      }
+    }
+    else {
+      // if alphabet the the range are as follows
+      // a to e
+      // f to j
+      const [lowerBound, upperBound] = (currentNodeLabelName >= 97 && currentNodeLabelName <= 101) ? [97, 101] : [102, 106];
+      for (const node of breadboard.sameXNodes[currentNode.x]) {
+        const nodeLabelName = node.label.charCodeAt(0);
+        if(nodeLabelName >= lowerBound && nodeLabelName <= upperBound && node.id != currentNode.id){
+          resultNodes.push(node);
+        }
+      }
+    }
+    return resultNodes;
+  }
 }

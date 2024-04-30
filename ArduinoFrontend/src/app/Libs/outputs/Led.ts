@@ -616,6 +616,87 @@ export class LED extends CircuitElement {
   }
 
 
+  public generateCode(repeat:number = 0) {
+
+    // Get the Nodes which are connected to Arduino can be greater than 2
+    const nodesQueue: Point[] = [
+      this.nodes[0],
+      this.nodes[1]
+    ];
+    // List of Tuple of CircuitElement and Point
+    let connections:[CircuitElement, Point][] = [];
+    // Infinite loop and recursion are bad
+    while (nodesQueue.length != 0) {
+      const node = nodesQueue.shift();
+      if (node.connectedTo) {
+        if (node.connectedTo.start) {
+          //check if the start point is connected to BreadBoard or ArduinoUno
+          if (node.connectedTo.start.parent.keyName == 'BreadBoard') {
+            BreadBoard.getConnectedNodes(node.connectedTo.start)
+              .forEach(breadBoardNode => nodesQueue.push(breadBoardNode))
+          } else if (node.connectedTo.start.parent.keyName == 'ArduinoUno') {
+            connections.push([node.connectedTo.start.parent, node.connectedTo.start]);
+          }
+        }
+        //check if the end point is connected to breadboard or ArduinoUno
+        if (node.connectedTo.end) {
+          if (node.connectedTo.end.parent.keyName == 'BreadBoard') {
+            BreadBoard.getConnectedNodes(node.connectedTo.end)
+              .forEach(breadBoardNode => nodesQueue.push(breadBoardNode))
+          } else if (node.connectedTo.end.parent.keyName == 'ArduinoUno') {
+            connections.push([node.connectedTo.end.parent, node.connectedTo.end]);
+          }
+        }
+      }
+    }
+
+    // filter Analog and digital pins (excluding RX0 and TX0)
+    connections = connections.filter(con => con[1].label.charAt(0) == 'A' || con[1].label.charAt(0) == 'D');
+
+    const suffix = (repeat == 0)?"":`${repeat + 1}`;
+
+    // Not supporting Different arduino code
+    if (connections.length == 2 && connections[0][0].id == connections[1][0].id) {
+      const microController = connections[0][0] as ArduinoUno;
+      return {
+        microControllerId: microController.name,
+        variables: [
+          `int ledPinP${suffix} = ${(connections[0][1] as Point).label};`,
+          `int ledPinN${suffix} = ${(connections[1][1] as Point).label};`
+        ],
+        setup: [
+          `pinMode(ledPinP${suffix}, OUTPUT);`,
+          `pinMode(ledPinN${suffix}, OUTPUT);`,
+        ],
+        loop: [
+          `digitalWrite(ledPinP${suffix}, HIGH);`,
+          `digitalWrite(ledPinN${suffix}, LOW);`,
+          `delay(500);`,
+          `digitalWrite(ledPinP${suffix}, LOW);`,
+          `digitalWrite(ledPinN${suffix}, LOW);`,
+        ]
+      };      
+    } else if (connections.length == 1) {
+      // one pin is connected to Arduino
+      const microController = connections[0][0] as ArduinoUno;
+      return {
+        microControllerId: microController.name,
+        variables: [`int ledPin${suffix} = ${(connections[0][1] as Point).label};`],
+        setup: [`pinMode(ledPin${suffix}, OUTPUT);`],
+        loop: [
+          `digitalWrite(ledPin${suffix}, HIGH);`,
+          `delay(500);`,
+          `digitalWrite(ledPin${suffix}, LOW);`,
+        ]
+      };
+    }
+      
+    console.warn("No Connections, no code will be generated")
+    
+
+    return null;
+  }
+
 }
 
 /**

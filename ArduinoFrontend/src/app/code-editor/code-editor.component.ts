@@ -144,6 +144,42 @@ export class CodeEditorComponent {
       }
     }
   }
+/**
+ * auto generate the .ino code in code editor
+ */
+  GenerateCode() {
+    let start = '', setup = '', loop = '';
+    for(const elementKey in window.scope){ 
+      // iterate element in window.scope 
+      if(!window.scope[elementKey]) continue; 
+      // if false then skip the element
+      let repeat = 0;
+      for(const element of window.scope[elementKey]){
+        //iterate over each element of the current element key 
+        if(element.generateCode){ 
+          //calls the generateCode function present inside the <element>.ts file
+          const generatedCircuitElementCode = element.generateCode(repeat);
+          if(generatedCircuitElementCode){ 
+            // if generated code exists then create start setup and loop
+            start += generatedCircuitElementCode.variables.join("\n")+"\n";
+            setup += generatedCircuitElementCode.setup.join("\n")+"\n";
+            loop += generatedCircuitElementCode.loop.join("\n")+"\n";
+          }
+        }
+        ++repeat;
+      }
+    }
+
+    this.code = `
+${start}
+void setup(){
+${setup}
+}
+void loop() {
+${loop}
+}`;
+  }
+
   /**
    * Download the code from code editor
    */
